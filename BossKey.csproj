@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ApplicationIcon>img\64.ico</ApplicationIcon>
+    
+    <BaseOutputPath>D:\MyProgram\debug\cs\Bosskey\</BaseOutputPath>
+    <IntermediateOutputPath>D:\MyProgram\debug\cs\Bosskey\obj\</IntermediateOutputPath>
+    <UseHostCompilerIfAvailable>false</UseHostCompilerIfAvailable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="img\32.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="img\64.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="img\32.ico" />
+  </ItemGroup>
+
+</Project>
