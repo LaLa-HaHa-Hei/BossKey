@@ -8,10 +8,6 @@
     <UseWPF>true</UseWPF>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ApplicationIcon>img\64.ico</ApplicationIcon>
-    
-    <BaseOutputPath>D:\MyProgram\debug\cs\Bosskey\</BaseOutputPath>
-    <IntermediateOutputPath>D:\MyProgram\debug\cs\Bosskey\obj\</IntermediateOutputPath>
-    <UseHostCompilerIfAvailable>false</UseHostCompilerIfAvailable>
   </PropertyGroup>
 
   <ItemGroup>
