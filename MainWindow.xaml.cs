@@ -18,24 +18,73 @@ namespace BossKey
         class HotKeyInfo(int id)
         {
             public int Id { get; set; } = id;
-            public List<(IntPtr Hwnd, bool Visible)> WindowsList { get; set; } = [];
-            public List<bool> VisibleList { get; set; } = [];
             public bool Visible = true;
+            public List<IntPtr> WindowList { get; set; } = [];
+            //public List<int> PIdList { get; set; } = [];
+            public List<string> PNameList { get; set; } = [];
             public void SwitchVisualStates()
             {
-                for(int i= 0; i<WindowsList.Count; i++)
+                int pid;
+                // 隐藏
+                if (Visible == true)
                 {
-                    if (WindowsList[i].Visible == true)
+                    for (int i = 0; i < WindowList.Count; i++)
                     {
-                        ShowWindow(WindowsList[i].Hwnd, 0);
-                        WindowsList[i] = (WindowsList[i].Hwnd, false);
+                        ShowWindow(WindowList[i], 0);
                     }
-                    else
+                    //if (PIdList.Count != 0 || PNameList.Count != 0)
+                    //{
+                        EnumWindows((hwnd, lParam) => 
+                        {
+                            _ = GetWindowThreadProcessId(hwnd, out pid);
+                            //if (PIdList.Contains(pid))
+                            //{
+                            //    ShowWindow(hwnd, 0);
+                            //}
+                            if (PNameList.Count != 0)
+                            {
+                                Process process = Process.GetProcessById(pid);
+                                if (PNameList.Contains(process.ProcessName))
+                                {
+                                    ShowWindow(hwnd, 0);
+                                }
+                            }
+                            return true;
+                        }, IntPtr.Zero);
+                    //}
+                    Visible = false;
+                }
+                // 显示
+                else
+                {
+                    for (int i = 0; i < WindowList.Count; i++)
                     {
-                        ShowWindow(WindowsList[i].Hwnd, 2);
-                        ShowWindow(WindowsList[i].Hwnd, 1);
-                        WindowsList[i] = (WindowsList[i].Hwnd, true);
+                        ShowWindow(WindowList[i], 2);
+                        ShowWindow(WindowList[i], 1);
                     }
+                    //if (PIdList.Count != 0 || PNameList.Count != 0)
+                    //{
+                        EnumWindows((hwnd, lParam) =>
+                        {
+                            _ = GetWindowThreadProcessId(hwnd, out pid);
+                            //if (PIdList.Contains(pid))
+                            //{
+                            //    ShowWindow(hwnd, 2);
+                            //    ShowWindow(hwnd, 1);
+                            //}
+                            if (PNameList.Count != 0)
+                            {
+                                Process process = Process.GetProcessById(pid);
+                                if (PNameList.Contains(process.ProcessName))
+                                {
+                                    ShowWindow(hwnd, 2);
+                                    ShowWindow(hwnd, 1);
+                                }
+                            }
+                            return true;
+                        }, IntPtr.Zero);
+                    //}
+                    Visible = true;
                 }
             }
         }
@@ -82,8 +131,9 @@ namespace BossKey
         private int _hotKeyId = 0;
         private IntPtr Handle= IntPtr.Zero;
         private SortDescription _sortDescriptionByVisible;
-        //private SortDescription _sortDescriptionByName;
+        private SortDescription _sortDescriptionByName;
         private readonly List<HotKeyInfo> _hotkeyList = [];
+        // 按压检测热键时
         private bool _isTextBoxAltPressed = false;
         private bool _isTextBoxCtrlPressed = false;
         private bool _isTextBoxShiftPressed = false;
@@ -93,7 +143,7 @@ namespace BossKey
         {
             InitializeComponent();
             _sortDescriptionByVisible = new SortDescription("Visible", ListSortDirection.Descending);
-            //_sortDescriptionByName = new SortDescription("Name", ListSortDirection.Descending);
+            _sortDescriptionByName = new SortDescription("Name", ListSortDirection.Ascending);
         }
         private bool EnumWindowsProc(IntPtr hwnd, IntPtr lParam)
         {
@@ -130,21 +180,21 @@ namespace BossKey
             {
                 filePath = "没有权限";
             }
-            WindowsListView.Items.Add(new WindowInfo { Hwnd = hwnd, Name = Title, Visible = visible, FilePath = filePath, Pid = pid, VisibleText=visibleText });
+            WindowListView.Items.Add(new WindowInfo { Hwnd = hwnd, Name = Title, Visible = visible, FilePath = filePath, Pid = pid, VisibleText=visibleText });
             return true;
         }
 
-        private void RefreshWindowsListView()
+        private void RefreshWindowListView()
         {
-            WindowsListView.Items.Clear();
+            WindowListView.Items.Clear();
             _ = EnumWindows(EnumWindowsProc, IntPtr.Zero);
-            WindowsListView.Items.SortDescriptions.Add(_sortDescriptionByVisible);
+            WindowListView.Items.SortDescriptions.Add(_sortDescriptionByVisible);
             //WindowsListView.Items.SortDescriptions.Add(_sortDescriptionByName);
         }
 
         private void AddHotKeyButton_Click(object sender, RoutedEventArgs e)
         {
-            if (WindowsListView.SelectedItems.Count == 0) { return; }
+            if (WindowListView.SelectedItems.Count == 0 && ProcessListView.SelectedItems.Count == 0) { return; }
             string[] keys = HotKeyTextBox.Text.Split('+');
             uint fsModifiers = 0;
             uint vk = 0;
@@ -173,12 +223,21 @@ namespace BossKey
             HotKeyInfo targetWindowList = new(_hotKeyId);
             StringBuilder textHotKeyListBox = new(HotKeyTextBox.Text);
             textHotKeyListBox.Append("  [");
-            foreach (var item in WindowsListView.SelectedItems)
+            foreach (var item in WindowListView.SelectedItems)
             {
                 if (item is WindowInfo windowInfo)
                 {
-                    targetWindowList.WindowsList.Add((windowInfo.Hwnd, windowInfo.Visible));
+                    targetWindowList.WindowList.Add((windowInfo.Hwnd));
                     textHotKeyListBox.Append(windowInfo.Name);
+                    textHotKeyListBox.Append('；');
+                }
+            }
+            foreach (var item in ProcessListView.SelectedItems)
+            {
+                if (item is ProcessInfo processInfo)
+                {
+                    targetWindowList.PNameList.Add((processInfo.Name));
+                    textHotKeyListBox.Append(processInfo.Name);
                     textHotKeyListBox.Append('；');
                 }
             }
@@ -222,12 +281,13 @@ namespace BossKey
             _hotkeyList.RemoveAt(index);
         }
 
-        private void RefreshWindowsListViewButton_Click(object sender, RoutedEventArgs e) => RefreshWindowsListView();
+        private void RefreshWindowListViewButton_Click(object sender, RoutedEventArgs e) => RefreshWindowListView();
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             Handle = new WindowInteropHelper(this).Handle;
-            RefreshWindowsListView();
+            RefreshWindowListView();
+            RefreshProcessListView();
             HwndSource hwndSource = HwndSource.FromHwnd(Handle);
             hwndSource.AddHook(WndProc);
             RegisterHotKey(Handle, 0xBFFF, MOD_ALT, (uint)KeyInterop.VirtualKeyFromKey(Key.P));
@@ -241,6 +301,11 @@ namespace BossKey
             public IntPtr Pid { set; get; }
             public string FilePath { set; get; } = string.Empty;
         }
+        class ProcessInfo
+        {
+            public string Name {  get; set; } = string.Empty;
+        }
+
         private void HotKeyTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             Key pressedKey;
@@ -313,6 +378,52 @@ namespace BossKey
             _isTextBoxCtrlPressed = false;
             _isTextBoxShiftPressed = false;
             _isTextBoxWinPressed = false;
+        }
+
+        private void RefreshProcessListViewButton_Click(object sender, RoutedEventArgs e) => RefreshProcessListView();
+        private void RefreshProcessListView()
+        {
+            HashSet<string> processNameList = [];
+            Process[] processeList = Process.GetProcesses();
+
+            foreach (Process process in processeList)
+            {
+                try
+                {
+                    processNameList.Add(process.ProcessName);
+                }
+                catch //(Exception ex)
+                {
+                    ;
+                    // 处理可能的权限异常
+                    //Console.WriteLine($"无法获取进程名: {ex.Message}");
+                }
+            }
+            foreach (string name in processNameList)
+            {
+                ProcessListView.Items.Add(new ProcessInfo { Name = name });
+            }
+            ProcessListView.Items.SortDescriptions.Add(_sortDescriptionByName);
+        }
+
+        private void TabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+/*            TabItem? selectedTab = ((TabControl)sender).SelectedItem as TabItem;
+            if (selectedTab != null)
+            {
+                // 获取选中的 Tab 的标题
+                switch (selectedTab.TabIndex)
+                {
+                    case 0:
+                        if (WindowListView.Items.Count == 0)
+                            RefreshWindowListView();
+                        break;
+                    case 1:
+                        if (ProcessListView.Items.Count == 0)
+                            RefreshProcessListView();
+                        break;
+                }
+            }*/
         }
     }
 }
