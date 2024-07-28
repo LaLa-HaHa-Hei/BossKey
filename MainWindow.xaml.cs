@@ -32,26 +32,19 @@ namespace BossKey
                     {
                         ShowWindow(WindowList[i], 0);
                     }
-                    //if (PIdList.Count != 0 || PNameList.Count != 0)
-                    //{
+                    if (PNameList.Count != 0)
+                    {
                         EnumWindows((hwnd, lParam) => 
                         {
                             _ = GetWindowThreadProcessId(hwnd, out pid);
-                            //if (PIdList.Contains(pid))
-                            //{
-                            //    ShowWindow(hwnd, 0);
-                            //}
-                            if (PNameList.Count != 0)
+                            Process process = Process.GetProcessById(pid);
+                            if (PNameList.Contains(process.ProcessName) && IsWindow(hwnd) && IsWindowEnabled(hwnd))
                             {
-                                Process process = Process.GetProcessById(pid);
-                                if (PNameList.Contains(process.ProcessName))
-                                {
-                                    ShowWindow(hwnd, 0);
-                                }
+                                ShowWindow(hwnd, 0);
                             }
                             return true;
                         }, IntPtr.Zero);
-                    //}
+                    }
                     Visible = false;
                 }
                 // 显示
@@ -62,28 +55,20 @@ namespace BossKey
                         ShowWindow(WindowList[i], 2);
                         ShowWindow(WindowList[i], 1);
                     }
-                    //if (PIdList.Count != 0 || PNameList.Count != 0)
-                    //{
+                    if (PNameList.Count != 0)
+                    {
                         EnumWindows((hwnd, lParam) =>
                         {
                             _ = GetWindowThreadProcessId(hwnd, out pid);
-                            //if (PIdList.Contains(pid))
-                            //{
-                            //    ShowWindow(hwnd, 2);
-                            //    ShowWindow(hwnd, 1);
-                            //}
-                            if (PNameList.Count != 0)
+                            Process process = Process.GetProcessById(pid);
+                            if (PNameList.Contains(process.ProcessName) && IsWindow(hwnd) && IsWindowEnabled(hwnd))
                             {
-                                Process process = Process.GetProcessById(pid);
-                                if (PNameList.Contains(process.ProcessName))
-                                {
-                                    ShowWindow(hwnd, 2);
-                                    ShowWindow(hwnd, 1);
-                                }
+                                ShowWindow(hwnd, 2);
+                                ShowWindow(hwnd, 1);
                             }
                             return true;
                         }, IntPtr.Zero);
-                    //}
+                    }
                     Visible = true;
                 }
             }
