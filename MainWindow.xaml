@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:BossKey"
         mc:Ignorable="d"
-        Title="BossKey" Height="400" Width="500" Loaded="Window_Loaded">
+        Title="BossKey「代码见三」" Height="400" Width="500" Loaded="Window_Loaded">
     <Grid>
         <TabControl Margin="0,0,0,125" SelectionChanged="TabControl_SelectionChanged">
             <TabItem Header="窗口">
