@@ -7,63 +7,61 @@
         mc:Ignorable="d"
         Title="BossKey「代码见三」" Height="400" Width="500" Loaded="Window_Loaded">
     <Grid>
-        <TabControl Margin="0,0,0,125" SelectionChanged="TabControl_SelectionChanged">
-            <TabItem Header="窗口">
-                <Grid>
-                    <ListView x:Name="WindowListView" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Standard" d:ItemsSource="{d:SampleData ItemCount=5}" Margin="0,0,0,20">
-                        <ListView.View>
-                            <GridView>
-                                <GridViewColumn Header="可视" Width="30" DisplayMemberBinding="{Binding VisibleText}"/>
-                                <GridViewColumn Header="句柄" Width="60" DisplayMemberBinding="{Binding Hwnd}"/>
-                                <GridViewColumn Header="窗口名" Width="360" DisplayMemberBinding="{Binding Name}"/>
-                                <!--<GridViewColumn Header="路径" Width="200" DisplayMemberBinding="{Binding FilePath}"/>
-            <GridViewColumn Header="pid" Width="50" DisplayMemberBinding="{Binding Pid}"/>-->
-                            </GridView>
-                        </ListView.View>
-                        <ListView.ItemContainerStyle>
-                            <Style TargetType="ListViewItem">
-                                <Setter Property="ToolTipService.ToolTip">
-                                    <Setter.Value>
-                                        <TextBlock Text="{Binding FilePath}">
+        <Menu>
+            <MenuItem x:Name="OpenAboutWindow" Header="关于" Click="OpenAboutWindow_Click"></MenuItem>
+        </Menu>
+        <ListView x:Name="WindowListView" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Standard" d:ItemsSource="{d:SampleData ItemCount=5}" Margin="0,20,0,125">
+            <ListView.View>
+                <GridView>
+                    <GridViewColumn Header="可视" Width="30" DisplayMemberBinding="{Binding VisibleText}"/>
+                    <GridViewColumn Header="句柄" Width="60" DisplayMemberBinding="{Binding Hwnd}"/>
+                    <GridViewColumn Header="窗口名" Width="360" DisplayMemberBinding="{Binding Name}"/>
+                </GridView>
+            </ListView.View>
+            <ListView.ItemContainerStyle>
+                <Style TargetType="ListViewItem">
+                    <Setter Property="ToolTipService.ToolTip">
+                        <Setter.Value>
+                            <TextBlock Text="{Binding FilePath}">
                         <!--<Run Text="{Binding Pid, StringFormat={}Pid:{0}}" />
                         <Run Text=" " />
                         <Run Text="{Binding FilePath}" />-->
-                                        </TextBlock>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </ListView.ItemContainerStyle>
-                    </ListView>
-                    <Button x:Name="RefreshWindowsListViewButton" Content="刷新窗口列表" HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="92" Height="20" Click="RefreshWindowListViewButton_Click"/>
+                            </TextBlock>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </ListView.ItemContainerStyle>
+        </ListView>
+        <Button  x:Name="RefreshWindowsListViewButton" Content="刷新" HorizontalAlignment="Right" VerticalAlignment="Top" Width="40" Height="20" Click="RefreshWindowListViewButton_Click" Margin="0,1,25,0"/>
+        <TabControl VerticalAlignment="Bottom" Height="101" Margin="0,0,0,20">
+            <TabItem Header="用快捷键">
+                <Grid Background="#FFE5E5E5">
+                    <TextBlock HorizontalAlignment="Left" Margin="10,5,0,0" TextWrapping="Wrap" Text="老板键：" Height="15" VerticalAlignment="Top"/>
+                    <TextBox x:Name="HotKeyTextBox" HorizontalAlignment="Left" Margin="58,5,0,0" TextWrapping="NoWrap" Text="Alt+E" Width="107" Height="17" VerticalAlignment="Top" PreviewKeyDown="HotKeyTextBox_PreviewKeyDown" PreviewMouseDown="HotKeyTextBox_PreviewMouseDown"/>
+                    <Button x:Name="AddHotKeyButton" Content="添加" HorizontalAlignment="Left" Margin="170,5,0,0" Width="50" Click="AddHotKeyButton_Click" Height="19" VerticalAlignment="Top"/>
+                    <Button x:Name="DelHotKeyButton" Content="删除" HorizontalAlignment="Left" Margin="230,5,0,0" Width="50" Click="DelHotKeyButton_Click" Height="19" VerticalAlignment="Top"/>
+                    <TextBlock Text="目标窗口：" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,25,0,0"></TextBlock>
+                    <TextBlock x:Name="HotKekWindowListTextBlock" Text="" Margin="70,25,10,10" TextWrapping="Wrap"/>
                 </Grid>
             </TabItem>
-            <TabItem Header="进程">
-                <Grid>
-                    <ListView x:Name="ProcessListView" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Standard" d:ItemsSource="{d:SampleData ItemCount=5}" Margin="0,0,0,20">
-                        <ListView.View>
-                            <GridView>
-                                <GridViewColumn Header="进程名称" Width="{Binding ActualWidth, ElementName=ProcessListView}" DisplayMemberBinding="{Binding Name}"/>
-                            </GridView>
-                        </ListView.View>
-                    </ListView>
-                    <Button x:Name="RefreshProcessListViewButton" Content="刷新进程名列表" HorizontalAlignment="Right" VerticalAlignment="Bottom" Height="20" Click="RefreshProcessListViewButton_Click"/>
+            <TabItem Header="用鼠标">
+                <Grid Background="#FFE5E5E5">
+                    <ComboBox x:Name="MouseComboBox" HorizontalAlignment="Left" VerticalAlignment="Top" SelectedIndex="0" Width="120" Height="20" Margin="10,5,0,0">
+                        <ComboBoxItem>鼠标中键</ComboBoxItem>
+                        <ComboBoxItem>左右键同时按下</ComboBoxItem>
+                        <ComboBoxItem>鼠标位置</ComboBoxItem>
+                    </ComboBox>
+                    <Button x:Name="AddMouseButton" Content="添加" HorizontalAlignment="Left" Margin="150,5,0,0" Width="50" Height="19" VerticalAlignment="Top" Click="AddMouseButton_Click"/>
+                    <Button x:Name="DelMouseButton" Content="删除" HorizontalAlignment="Left" Margin="210,5,0,0" Width="50" Height="19" VerticalAlignment="Top" Click="DelMouseButton_Click"/>
+                    <TextBlock Text="“鼠标位置”：鼠标放到目标窗口上是窗口显示，移开隐藏"  Margin="10,25,0,0" HorizontalAlignment="Left" VerticalAlignment="Top"></TextBlock>
+                    <TextBlock Text="目标窗口：" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,40,0,0"></TextBlock>
+                    <TextBlock x:Name="MouseWindowListTextBlock" Text="" Margin="70,40,10,10" TextWrapping="Wrap"/>
                 </Grid>
             </TabItem>
         </TabControl>
-
-        <TextBox x:Name="HotKeyTextBox" HorizontalAlignment="Left" Margin="58,0,0,100" TextWrapping="NoWrap" Text="Alt+E" Width="107" Height="17" VerticalAlignment="Bottom" PreviewKeyDown="HotKeyTextBox_PreviewKeyDown" PreviewMouseDown="HotKeyTextBox_PreviewMouseDown"/>
-        <TextBlock HorizontalAlignment="Left" Margin="10,0,0,100" TextWrapping="Wrap" Text="老板键：" Height="15" VerticalAlignment="Bottom"/>
-        <Button x:Name="AddHotKeyButton" Content="添加" HorizontalAlignment="Left" Margin="170,0,0,98" Width="65" Click="AddHotKeyButton_Click" Height="19" VerticalAlignment="Bottom"/>
-        <ListBox x:Name="HotKeyListBox" Margin="10,0,10,25" d:ItemsSource="{d:SampleData ItemCount=3}" VerticalAlignment="Bottom" Height="65">
-            <ListBox.ContextMenu>
-                <ContextMenu>
-                    <MenuItem Header="删除该热键" Click="DeleteHotKey_Click"/>
-                </ContextMenu>
-            </ListBox.ContextMenu>
-        </ListBox>
         <StatusBar Height="20" VerticalAlignment="Bottom">
-            <StatusBarItem Content="已选" Height="20"/>
+            <TextBlock Text="控制本程序的热键为Alt + P"></TextBlock>
         </StatusBar>
-        <TextBlock HorizontalAlignment="Left" Height="15" Margin="240,0,0,100" TextWrapping="Wrap" VerticalAlignment="Bottom" Width="163"><Run Text="控制本程序的热键为Alt"/><Run Language="zh-cn" Text="+P"/><LineBreak/><Run/></TextBlock>
+
     </Grid>
 </Window>

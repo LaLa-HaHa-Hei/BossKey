@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <None Remove="img\32.ico" />
+    <None Remove="img\qqGroup.jpg" />
   </ItemGroup>
 
   <ItemGroup>
@@ -20,6 +21,7 @@
 
   <ItemGroup>
     <Resource Include="img\32.ico" />
+    <Resource Include="img\qqGroup.jpg" />
   </ItemGroup>
 
 </Project>

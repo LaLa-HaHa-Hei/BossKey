@@ -3,10 +3,8 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
-using System.Windows.Media;
 
 namespace BossKey
 {
@@ -15,65 +13,6 @@ namespace BossKey
     /// </summary>
     public partial class MainWindow : Window
     {
-        class HotKeyInfo(int id)
-        {
-            public int Id { get; set; } = id;
-            public bool Visible = true;
-            public List<IntPtr> WindowList { get; set; } = [];
-            //public List<int> PIdList { get; set; } = [];
-            public List<string> PNameList { get; set; } = [];
-            public void SwitchVisualStates()
-            {
-                int pid;
-                // 隐藏
-                if (Visible == true)
-                {
-                    for (int i = 0; i < WindowList.Count; i++)
-                    {
-                        ShowWindow(WindowList[i], 0);
-                    }
-                    if (PNameList.Count != 0)
-                    {
-                        EnumWindows((hwnd, lParam) => 
-                        {
-                            _ = GetWindowThreadProcessId(hwnd, out pid);
-                            Process process = Process.GetProcessById(pid);
-                            if (PNameList.Contains(process.ProcessName) && IsWindow(hwnd) && IsWindowEnabled(hwnd))
-                            {
-                                ShowWindow(hwnd, 0);
-                            }
-                            return true;
-                        }, IntPtr.Zero);
-                    }
-                    Visible = false;
-                }
-                // 显示
-                else
-                {
-                    for (int i = 0; i < WindowList.Count; i++)
-                    {
-                        ShowWindow(WindowList[i], 2);
-                        ShowWindow(WindowList[i], 1);
-                    }
-                    if (PNameList.Count != 0)
-                    {
-                        EnumWindows((hwnd, lParam) =>
-                        {
-                            _ = GetWindowThreadProcessId(hwnd, out pid);
-                            Process process = Process.GetProcessById(pid);
-                            if (PNameList.Contains(process.ProcessName) && IsWindow(hwnd) && IsWindowEnabled(hwnd))
-                            {
-                                ShowWindow(hwnd, 2);
-                                ShowWindow(hwnd, 1);
-                            }
-                            return true;
-                        }, IntPtr.Zero);
-                    }
-                    Visible = true;
-                }
-            }
-        }
-
         private delegate bool WndEnumProc(IntPtr hwnd, IntPtr lParam);
         [LibraryImport("user32.dll")]
         private static partial int EnumWindows(WndEnumProc lpEnumFunc, IntPtr lParam);
@@ -92,37 +31,32 @@ namespace BossKey
         private static extern int GetWindowTextLength(IntPtr hWnd);
         [LibraryImport("user32.dll")]
         private static partial int GetWindowThreadProcessId(IntPtr hWnd, out int lpdwProcessId);
-        [DllImport("user32.DLL")]
-        private static extern bool ShowWindow(IntPtr hWnd, uint nCmdShow);
-        [DllImport("user32.dll")]
-        private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
-        [DllImport("user32.dll")]
-        private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
         [DllImport("user32.dll")]
         private static extern uint MapVirtualKey(uint uCode, uint uMapType);
 
         // 注册全局热键的常量
-        private const int WM_HOTKEY = 0x0312;
         private const int MOD_ALT = 0x0001;
         private const int MOD_CONTROL = 0x0002;
         private const int MOD_SHIFT = 0x0004;
         private const int MOD_WIN = 0x0008;
 
-        private const int WM_GETTRAYWND = 0x0000;
-        private const int WM_GETTRAYPOS = 0x0005;
-        private const int TB_BUTTONCOUNT = 0x0418;
-        private const int TB_GETBUTTON = 0x417;
+        //private const int WM_GETTRAYWND = 0x0000;
+        //private const int WM_GETTRAYPOS = 0x0005;
+        //private const int TB_BUTTONCOUNT = 0x0418;
+        //private const int TB_GETBUTTON = 0x417;
 
         private int _hotKeyId = 0;
         private IntPtr Handle= IntPtr.Zero;
         private SortDescription _sortDescriptionByVisible;
         private SortDescription _sortDescriptionByName;
-        private readonly List<HotKeyInfo> _hotkeyList = [];
         // 按压检测热键时
         private bool _isTextBoxAltPressed = false;
         private bool _isTextBoxCtrlPressed = false;
         private bool _isTextBoxShiftPressed = false;
         private bool _isTextBoxWinPressed = false;
+
+        private HotkeyWindowToggler? _hotkeyWindowToggler = null;
+        private MouseWindowToggler? _mouseWindowToggler = null;
 
         public MainWindow()
         {
@@ -176,10 +110,11 @@ namespace BossKey
             WindowListView.Items.SortDescriptions.Add(_sortDescriptionByVisible);
             //WindowsListView.Items.SortDescriptions.Add(_sortDescriptionByName);
         }
+        private void RefreshWindowListViewButton_Click(object sender, RoutedEventArgs e) => RefreshWindowListView();
 
         private void AddHotKeyButton_Click(object sender, RoutedEventArgs e)
         {
-            if (WindowListView.SelectedItems.Count == 0 && ProcessListView.SelectedItems.Count == 0) { return; }
+            if (WindowListView.SelectedItems.Count == 0) { return; }
             string[] keys = HotKeyTextBox.Text.Split('+');
             uint fsModifiers = 0;
             uint vk = 0;
@@ -205,77 +140,105 @@ namespace BossKey
                         break;
                 }
             }
-            HotKeyInfo targetWindowList = new(_hotKeyId);
-            StringBuilder textHotKeyListBox = new(HotKeyTextBox.Text);
-            textHotKeyListBox.Append("  [");
+            StringBuilder text = new();
+            if (_hotkeyWindowToggler != null)
+            {
+                _hotkeyWindowToggler.Dispose();
+                _hotkeyWindowToggler = null;
+            }
+            _hotkeyWindowToggler = new(Handle, _hotKeyId, fsModifiers, vk);
             foreach (var item in WindowListView.SelectedItems)
             {
                 if (item is WindowInfo windowInfo)
                 {
-                    targetWindowList.WindowList.Add((windowInfo.Hwnd));
-                    textHotKeyListBox.Append(windowInfo.Name);
-                    textHotKeyListBox.Append('；');
+                    _hotkeyWindowToggler.HWNDList.Add(windowInfo.Hwnd);
+                    text.Append(windowInfo.Hwnd);
+                    text.Append(':');
+                    text.Append(windowInfo.Name);
+                    text.Append("; ");
                 }
             }
-            foreach (var item in ProcessListView.SelectedItems)
-            {
-                if (item is ProcessInfo processInfo)
-                {
-                    targetWindowList.PNameList.Add((processInfo.Name));
-                    textHotKeyListBox.Append(processInfo.Name);
-                    textHotKeyListBox.Append('；');
-                }
-            }
-            if (!RegisterHotKey(Handle, _hotKeyId, fsModifiers, vk))
+            if (!_hotkeyWindowToggler.Register())
             {
                 MessageBox.Show("注册热键失败！不能添加重复的热键");
+                _hotkeyWindowToggler?.Dispose();
+                _hotkeyWindowToggler = null;
+                HotKekWindowListTextBlock.Text = "";
                 return;
             }
-            textHotKeyListBox.Append(']');
-            HotKeyListBox.Items.Add(textHotKeyListBox);
-            _hotkeyList.Add(targetWindowList);
-            _hotKeyId++;
+            HotKekWindowListTextBlock.Text = text.ToString();
         }
-        private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        private void DelHotKeyButton_Click(object sender, RoutedEventArgs e)
         {
-            if (msg == WM_HOTKEY)
+            _hotkeyWindowToggler?.Dispose();
+            _hotkeyWindowToggler = null;
+            HotKekWindowListTextBlock.Text = "";
+        }
+
+        private void AddMouseButton_Click(object sender, RoutedEventArgs e)
+        {
+            int selectedIndex = MouseComboBox.SelectedIndex;
+            StringBuilder text = new();
+            if (_mouseWindowToggler != null)
             {
-                if (wParam == 0xBFFF)
+                _mouseWindowToggler.Dispose();
+                _mouseWindowToggler = null;
+            }
+            if (selectedIndex == 0)
+            {
+                _mouseWindowToggler = new(MouseWindowToggler.Mode.ToggleOnMiddleClick);
+            }
+            else if(selectedIndex == 1)
+            {
+                _mouseWindowToggler = new(MouseWindowToggler.Mode.ToggleOnSimultaneousLeftRightClick);
+            }
+            else if (selectedIndex == 2)
+            {
+                _mouseWindowToggler = new(MouseWindowToggler.Mode.ToggleOnCursorInWindow);
+            }
+            else
+            {
+                MessageBox.Show("错误，没有对应的模式");
+                return;
+            }
+            foreach (var item in WindowListView.SelectedItems)
+            {
+                if (item is WindowInfo windowInfo)
                 {
-                    if (Visibility == Visibility.Visible) { Hide(); }
-                    else { Show(); }
-                }
-                else
-                {
-                    SwitchTargetWindow(wParam.ToInt32());
+                    if (selectedIndex == 2)
+                        _mouseWindowToggler.HWNDList_CurserInWindow.Add((windowInfo.Hwnd, false));
+                    else
+                        _mouseWindowToggler.HWNDList.Add(windowInfo.Hwnd);
+                    text.Append(windowInfo.Hwnd);
+                    text.Append(':');
+                    text.Append(windowInfo.Name);
+                    text.Append("; ");
                 }
             }
-            return IntPtr.Zero;
+            if (!_mouseWindowToggler.SetHook())
+            {
+                MessageBox.Show("注册鼠标钩子失败！");
+                _mouseWindowToggler?.Dispose();
+                _mouseWindowToggler = null;
+                MouseWindowListTextBlock.Text = "";
+                return;
+            }
+            MouseWindowListTextBlock.Text = text.ToString();
         }
-
-        private void SwitchTargetWindow(int id)
+        private void DelMouseButton_Click(object sender, RoutedEventArgs e)
         {
-            var item = _hotkeyList.Where(x => x.Id == id).FirstOrDefault();
-            item?.SwitchVisualStates();
+            _mouseWindowToggler?.Dispose();
+            _mouseWindowToggler = null;
+            MouseWindowListTextBlock.Text = "";
         }
-        private void DeleteHotKey_Click(object sender, EventArgs e)
-        {
-            int index = HotKeyListBox.SelectedIndex;
-            HotKeyListBox.Items.RemoveAt(index);
-            UnregisterHotKey(Handle, _hotkeyList[index].Id);
-            _hotkeyList.RemoveAt(index);
-        }
-
-        private void RefreshWindowListViewButton_Click(object sender, RoutedEventArgs e) => RefreshWindowListView();
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             Handle = new WindowInteropHelper(this).Handle;
             RefreshWindowListView();
-            RefreshProcessListView();
-            HwndSource hwndSource = HwndSource.FromHwnd(Handle);
-            hwndSource.AddHook(WndProc);
-            RegisterHotKey(Handle, 0xBFFF, MOD_ALT, (uint)KeyInterop.VirtualKeyFromKey(Key.P));
+            HotkeyWindowToggler mainWindowHotkey = new(Handle, 0xBFFF, MOD_ALT, (uint)KeyInterop.VirtualKeyFromKey(Key.P));
+            mainWindowHotkey.HWNDList.Add(Handle);
+            mainWindowHotkey.Register();
         }
         class WindowInfo
         {
@@ -285,10 +248,6 @@ namespace BossKey
             public IntPtr Hwnd { set; get; }
             public IntPtr Pid { set; get; }
             public string FilePath { set; get; } = string.Empty;
-        }
-        class ProcessInfo
-        {
-            public string Name {  get; set; } = string.Empty;
         }
 
         private void HotKeyTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -365,50 +324,13 @@ namespace BossKey
             _isTextBoxWinPressed = false;
         }
 
-        private void RefreshProcessListViewButton_Click(object sender, RoutedEventArgs e) => RefreshProcessListView();
-        private void RefreshProcessListView()
+        private void OpenAboutWindow_Click(object sender, RoutedEventArgs e)
         {
-            HashSet<string> processNameList = [];
-            Process[] processeList = Process.GetProcesses();
-
-            foreach (Process process in processeList)
+            AboutWindow w = new()
             {
-                try
-                {
-                    processNameList.Add(process.ProcessName);
-                }
-                catch //(Exception ex)
-                {
-                    ;
-                    // 处理可能的权限异常
-                    //Console.WriteLine($"无法获取进程名: {ex.Message}");
-                }
-            }
-            foreach (string name in processNameList)
-            {
-                ProcessListView.Items.Add(new ProcessInfo { Name = name });
-            }
-            ProcessListView.Items.SortDescriptions.Add(_sortDescriptionByName);
-        }
-
-        private void TabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-/*            TabItem? selectedTab = ((TabControl)sender).SelectedItem as TabItem;
-            if (selectedTab != null)
-            {
-                // 获取选中的 Tab 的标题
-                switch (selectedTab.TabIndex)
-                {
-                    case 0:
-                        if (WindowListView.Items.Count == 0)
-                            RefreshWindowListView();
-                        break;
-                    case 1:
-                        if (ProcessListView.Items.Count == 0)
-                            RefreshProcessListView();
-                        break;
-                }
-            }*/
+                Owner = this
+            };
+            w.Show();
         }
     }
 }
